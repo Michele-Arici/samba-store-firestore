@@ -1,4 +1,7 @@
 import { getCookie, setCookie, eraseCookie } from './sambaCookies.js';
+import { doc, getDoc, getDocs, collection, addDoc, deleteDoc, updateDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
 
 function logout() {
     eraseCookie("user_email");
@@ -20,7 +23,9 @@ const firebaseConfig = {
     appId: "1:615866017038:web:73642d6681881c342be35f",
     measurementId: "G-ESNYSNZGTF",
 };
-firebase.initializeApp(firebaseConfig);
+
+const app = initializeApp(firebaseConfig);
+self.firestore = getFirestore(app);
 
 if (email != null) {
     //if you're logged in you'll see this
@@ -80,11 +85,38 @@ if (email != null) {
             </div>`;
     document.getElementById('profile_button_browse').innerHTML = div;
 }
+/*
+const album_ref = collection(firestore, 'albums/');
+const albums = await getDocs(query(album_ref));
+console.log(albums);
 
+if (albums != null) {
+    let max = { release_date: "1900-01-01" };
+    let latest_albums = [];
 
-let tracksRef = firebase.database().ref("tracks/");
-let albumsRef = firebase.database().ref("albums/");
-let artistsRef = firebase.database().ref("artists/");
+    await albums.forEach(async album => {
+        const element = album.data();
+        console.log(element);
+        if (new Date(element.release_date) > new Date(max.release_date)) {
+            max = element.release_date;
+            latest_albums.push(element);
+        }
+    });
+    console.log(latest_albums);
+    
+    const artist_doc = album.ID_AR; 
+    const artist_path = artist_doc.path;
+    const artist_id = artist_path.split('/');
+    
+    const artist_ref = doc(firestore, artist_path);
+    const artist = (await getDoc(artist_ref)).data();
+    
+    if (artist != null) {
+        document.getElementById('album_title_artist_name').innerHTML = `${artist.name} ${artist.surname}`;
+        document.getElementById('album_title_artist_name').href = "./artist.html?ID_AR=" + artist_id[1];
+    }
+}
+
 
 
 albumsRef.once("value", (snap) => {
@@ -134,6 +166,59 @@ albumsRef.once("value", (snap) => {
     }
 });
 
+*/
+
+const album_ref = collection(firestore, 'albums/');
+const albums = await getDocs(query(album_ref));
+let y = 0;
+
+if (albums != null) {
+    var album_title_div = `<div id="albums">
+        <hr style="margin: 2rem 0 0.2rem 0;">
+        <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
+            <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                Albums
+            </h2>
+        </div>
+        <div class="row row-cards" id="albums_row">
+            
+        </div>
+    </div>`;
+    $("#all_results").append(album_title_div);
+
+    const artists_ref = collection(firestore, 'artists/');
+    const artists = await getDocs(query(artists_ref));
+
+    if (artists != null) {
+        await artists.forEach(async artist => {
+            const element_artist = artist.data();
+
+            await albums.forEach(async album => {
+                const element = album.data();
+
+                const artist_doc = element.ID_AR; 
+                const artist_path = artist_doc.path;
+                const artist_id = artist_path.split('/');
+
+                if (artist_id[1] == artist.id && y < 12) {
+                    var t_album_div = `<div class="col-2">
+                        <a href="./show.html?ID_A=${album.id}" class="d-block mb-1"><img style="border-radius: 5px;" src="${element.image}" class="card-img-top"></a>
+                        <div class="d-flex align-items-center">
+                            <div style="line-height: 15px;">
+                                <div><strong>${element.name}</strong></div>
+                                <a href="./artist.html?ID_AR=${artist.id}" class="text-muted" style="font-size: 12px;"><strong>${element_artist.name} ${element_artist.surname}</strong></a>
+                            </div>
+                        </div>
+                    </div>`;
+
+                    $("#new_releases_row").append(t_album_div);
+                    y++;
+                }
+            });
+        });
+    }
+}
+
 
 function secondsToFormat(totalSeconds) {
 
@@ -151,7 +236,81 @@ function secondsToFormat(totalSeconds) {
 }
 
 
-let tracks = [];
+const tracks_ref = collection(firestore, 'tracks/');
+const tracks = await getDocs(query(tracks_ref));
+console.log(tracks);
+
+if (tracks != null) {
+    var i = 0;
+
+    const artists_ref = collection(firestore, 'artists/');
+    const artists = await getDocs(query(artists_ref));
+
+    if (artists != null) {
+        await artists.forEach(async artist => {
+            const element_artist = artist.data();
+            console.log(artist.id);
+            await tracks.forEach(async track => {
+                const element = track.data();
+
+                const artist_doc = element.ID_AR; 
+                const artist_path = artist_doc.path;
+                const artist_id = artist_path.split('/');
+
+                const album_doc = element.ID_A; 
+                const album_path = album_doc.path;
+                const album_id = album_path.split('/');
+
+                if (artist_id[1] == artist.id && i < 12) {
+                    var t_track_div = `<div class="col-3">
+                        <div class="row g-3 align-items-center">
+                            <a class="col-auto">
+                                <span class="avatar" style="background-image: url(${element.image})"></span>
+                            </a>
+                            <div class="col text-truncate">
+                                <a href="./show.html?ID_A=${album_id[1]}&ID_T=${track.id}" class="text-reset d-block text-truncate" style="font-weight: 500; line-height: 1;">${element.name}</a>
+                                <a href="./artist.html?ID_AR=${artist.id}" class="text-muted text-truncate mt-n1" style="font-weight: 400;">${element_artist.name} ${element_artist.surname}</a>
+                            </div>
+                            <div class="text-muted col-auto">
+                                ${secondsToFormat(element.duration)}
+                            </div>
+                            <hr style="width:90%; margin-left:5% !important; margin-right:5% !important; margin-top:10px !important; margin-bottom:10px !important;">
+                        </div>
+                    </div>`;
+
+                    $("#trending_row").append(t_track_div);
+                    i++;
+                }
+            });
+        });
+    }
+    tracks.forEach(track => {
+        const element = track.data();
+
+        console.log(element);
+    });
+
+    
+}
+
+/*
+await albums.forEach(async album => {
+    index = Math.floor(Math.random() * tracks.length);
+    t = tracks[index];
+    if (t != undefined && !randList_index.includes(index)) {
+        randList_index.push(index);
+        randList.push(t);
+        randList_artist_index.push(t.ID_AR);
+    }
+    
+    const element = album.data();
+    console.log(element);
+    if (new Date(element.release_date) > new Date(max.release_date)) {
+        max = element.release_date;
+        latest_albums.push(element);
+    }
+});
+//let tracks = [];
 tracksRef.once("value", function (snap) {
     tracks = snap.val();
     var randList = [];
@@ -204,6 +363,7 @@ tracksRef.once("value", function (snap) {
     });
 
 });
+*/
 
 document.getElementById('search_mood_hiphop').addEventListener("click", function (event) {
     window.location.href = "./results.html?searched=" + encodeURIComponent("Hip-hop");

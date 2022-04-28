@@ -154,7 +154,11 @@
             return result;
         }
     </script>
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
+        import { doc, getDoc, getDocs, collection, addDoc, deleteDoc, updateDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
+
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
         const searched = urlParams.get('searched')
@@ -171,291 +175,316 @@
                 appId: "1:615866017038:web:73642d6681881c342be35f",
                 measurementId: "G-ESNYSNZGTF",
             };
-            firebase.initializeApp(firebaseConfig);
 
-            var tracksRef = firebase.database().ref("tracks/");
-            var albumsRef = firebase.database().ref("albums/");
-            var artistsRef = firebase.database().ref("artists/");
+            const app = initializeApp(firebaseConfig);
+            self.firestore = getFirestore(app);
 
             var n_found = 0;
             
-            var artistResults = [];
-            artistsRef.once("value", (snap) => {
-                let artists = snap.val();
 
-                artists.forEach((artist) => {
-                    if (artist !== artists) {
-                        var arn = artist.name;
-                        var arsn = artist.surname;
-                        var full_name = arn + " " + arsn;
-                        var full_name2 = arsn + " " + arn;
-                        if (arn.toLowerCase() == searched.toLowerCase() || arsn.toLowerCase().includes(searched.toLowerCase()) || arn.toLowerCase().includes(searched.toLowerCase()) || arsn.toLowerCase() == searched.toLowerCase() || full_name.toLowerCase() == searched.toLowerCase() || full_name2.toLowerCase() == searched.toLowerCase()) {
-                            artistResults.push(artist)
-                        }
+            const artist_ref = collection(firestore, 'artists/');
+            const artist = await getDocs(query(artist_ref));
+            let artistResults = [];
+
+            if (artist != null) {
+                await artist.forEach(async artist => {
+                    const element = artist.data();
+
+                    var arn = element.name;
+                    var arsn = element.surname;
+                    var full_name = arn + " " + arsn;
+                    var full_name2 = arsn + " " + arn;
+                    if (arn.toLowerCase() == searched.toLowerCase() || arsn.toLowerCase().includes(searched.toLowerCase()) || arn.toLowerCase().includes(searched.toLowerCase()) || arsn.toLowerCase() == searched.toLowerCase() || full_name.toLowerCase() == searched.toLowerCase() || full_name2.toLowerCase() == searched.toLowerCase()) {
+                        artistResults.push(artist);
                     }
                 });
+            }
 
-                if (artistResults.length > 0) {
-                    var artist_title_div = `<div id="artists">
-                        <hr style="margin: 2rem 0 0.2rem 0;">
-                        <div class="page-header d-print-none mb-1" style="margin: 0.2rem 0 0;">
-                            <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                Artists
-                            </h2>
+            if (artistResults.length > 0) {
+                var artist_title_div = `<div id="artists">
+                    <hr style="margin: 2rem 0 0.2rem 0;">
+                    <div class="page-header d-print-none mb-1" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Artists
+                        </h2>
+                    </div>
+                    <div class="row row-cards" id="artists_row">
+    
+                    </div>
+                </div>`;
+                $("#all_results").append(artist_title_div);
+
+                await artistResults.forEach(async artist => {
+                    const element = artist.data();
+                    
+                    var artist_div = `<div class="col-2 text-center">
+                        <div class="mb-1">
+                            <a href="./artist.html?ID_AR=${artist.id}">
+                                <span class="avatar avatar-xl avatar-rounded" style="background-image: url(${element.image})"></span>
+                            </a>
                         </div>
-                        <div class="row row-cards" id="artists_row">
+                        <div class="card-title mb-1">${element.name} ${element.surname}</div>
+                    </div>`
+    
+                    $("#artists_row").append(artist_div);
+                });
 
-                        </div>
-                    </div>`;
-                    $("#all_results").append(artist_title_div);
+                n_found++;
+            }
 
-                    for (let i = 0; i < artistResults.length; i++) {
-                        const element = artistResults[i];
-                        var artist_div = `<div class="col-2 text-center">
-                            <div class="mb-1">
-                                <a href="./artist.html?ID_AR=${element.ID_AR}">
-                                    <span class="avatar avatar-xl avatar-rounded" style="background-image: url(${element.image})"></span>
-                                </a>
-                            </div>
-                            <div class="card-title mb-1">${element.name} ${element.surname}</div>
-                        </div>`
-
-                        $("#artists_row").append(artist_div);
-                    }
-
-                    n_found++;
-                }
-            });
-
+            const album_ref = collection(firestore, 'albums/');
+            const albums = await getDocs(query(album_ref));
             var albumResults = [];
             var genereResults = [];
             var stateResults = [];
-            albumsRef.once("value", (snap) => {
-                let albums = snap.val();
 
-                albums.forEach((album) => {
-                    if (album !== undefined) {
-                        var an = album.name;
-                        var ag = album.genre;
-                        var as = album.state;
-                        if (an.toLowerCase() == searched.toLowerCase() || an.toLowerCase().includes(searched.toLowerCase())) {
-                            albumResults.push(album)
-                        }
-                        if (ag.toLowerCase() == searched.toLowerCase() || ag.toLowerCase().includes(searched.toLowerCase())) {
-                            genereResults.push(album)
-                        }
-                        if (as != null) {    
-                            if (as.toLowerCase() == searched.toLowerCase() || as.toLowerCase().includes(searched.toLowerCase())) {
-                                stateResults.push(album)
-                            }
+            if (albums != null) {
+                await albums.forEach(async album => {
+                    const element = album.data();
+
+                    var an = element.name;
+                    var ag = element.genre;
+                    var as = element.state;
+                    if (an.toLowerCase() == searched.toLowerCase() || an.toLowerCase().includes(searched.toLowerCase())) {
+                        albumResults.push(album)
+                    }
+                    if (ag.toLowerCase() == searched.toLowerCase() || ag.toLowerCase().includes(searched.toLowerCase())) {
+                        genereResults.push(album)
+                    }
+                    if (as != null) {    
+                        if (as.toLowerCase() == searched.toLowerCase() || as.toLowerCase().includes(searched.toLowerCase())) {
+                            stateResults.push(album)
                         }
                     }
                 });
+            }
 
-                if (albumResults.length > 0) {
-                    var album_title_div = `<div id="albums">
-                        <hr style="margin: 2rem 0 0.2rem 0;">
-                        <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
-                            <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                Albums
-                            </h2>
-                        </div>
-                        <div class="row row-cards" id="albums_row">
-                            
-                        </div>
-                    </div>`;
-                    $("#all_results").append(album_title_div);
+            if (albumResults.length > 0) {
+                var album_title_div = `<div id="albums">
+                    <hr style="margin: 2rem 0 0.2rem 0;">
+                    <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Albums
+                        </h2>
+                    </div>
+                    <div class="row row-cards" id="albums_row">
+                        
+                    </div>
+                </div>`;
+                $("#all_results").append(album_title_div);
 
-                    artistsRef.once("value", (snap) => {
-                        let artists = snap.val();
-    
-                        artists.forEach((element) => {
-                            if (element !== undefined) {
-                                for (let i = 0; i < albumResults.length; i++) {
-                                    const album = albumResults[i];
-                                    if (album.ID_AR == element.ID_AR) {
-                                        var t_album_div = `<div class="col-2">
-                                            <a href="./show.html?ID_A=${album.ID_A}" class="d-block mb-1"><img style="border-radius: 5px;" src="${album.image}" class="card-img-top"></a>
-                                            <div class="d-flex align-items-center">
-                                                <div style="line-height: 15px;">
-                                                    <div><strong>${album.name}</strong></div>
-                                                    <a href="./artist.html?ID_AR=${element.ID_AR}" class="text-muted" style="font-size: 12px;"><strong>${element.name} ${element.surname}</strong></a>
-                                                </div>
-                                            </div>
-                                        </div>`
-    
-                                        $("#albums_row").append(t_album_div);
-                                    }
-                                }
+                const artists_ref = collection(firestore, 'artists/');
+                const artists = await getDocs(query(artists_ref));
+
+                if (artists != null) {
+                    await artists.forEach(async artist => {
+                        const element_artist = artist.data();
+
+                        await albumResults.forEach(async album => {
+                            const element = album.data();
+
+                            const artist_doc = element.ID_AR; 
+                            const artist_path = artist_doc.path;
+                            const artist_id = artist_path.split('/');
+
+                            if (artist_id[1] == artist.id) {
+                                var t_album_div = `<div class="col-2">
+                                    <a href="./show.html?ID_A=${album.id}" class="d-block mb-1"><img style="border-radius: 5px;" src="${element.image}" class="card-img-top"></a>
+                                    <div class="d-flex align-items-center">
+                                        <div style="line-height: 15px;">
+                                            <div><strong>${element.name}</strong></div>
+                                            <a href="./artist.html?ID_AR=${artist.id}" class="text-muted" style="font-size: 12px;"><strong>${element_artist.name} ${element_artist.surname}</strong></a>
+                                        </div>
+                                    </div>
+                                </div>`;
+
+                                $("#albums_row").append(t_album_div);
                             }
                         });
                     });
-
-                    n_found++;
                 }
 
-                if (genereResults.length > 0) {
-                    var album_title_div = `<div id="genere">
-                        <hr style="margin: 2rem 0 0.2rem 0;">
-                        <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
-                            <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                Genere
-                            </h2>
-                        </div>
-                        <div class="row row-cards" id="genere_row">
-                            
-                        </div>
-                    </div>`;
-                    $("#all_results").append(album_title_div);
+                n_found++;
+            }
 
-                    artistsRef.once("value", (snap) => {
-                        let artists = snap.val();
-    
-                        artists.forEach((element) => {
-                            if (element !== undefined) {
-                                for (let i = 0; i < genereResults.length; i++) {
-                                    const album = genereResults[i];
-                                    if (album.ID_AR == element.ID_AR) {
-                                        var t_album_div = `<div class="col-2">
-                                            <a href="./show.html?ID_A=${album.ID_A}" class="d-block mb-1"><img style="border-radius: 5px;" src="${album.image}" class="card-img-top"></a>
-                                            <div class="d-flex align-items-center">
-                                                <div style="line-height: 15px;">
-                                                    <div><strong>${album.name}</strong></div>
-                                                    <a href="./artist.html?ID_AR=${element.ID_AR}" class="text-muted" style="font-size: 12px;"><strong>${element.name} ${element.surname}</strong></a>
-                                                </div>
-                                            </div>
-                                        </div>`
-    
-                                        $("#genere_row").append(t_album_div);
-                                    }
-                                }
+            if (genereResults.length > 0) {
+                var album_title_div = `<div id="genere">
+                    <hr style="margin: 2rem 0 0.2rem 0;">
+                    <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Genere
+                        </h2>
+                    </div>
+                    <div class="row row-cards" id="genere_row">
+                        
+                    </div>
+                </div>`;
+                $("#all_results").append(album_title_div);
+
+                const artists_ref = collection(firestore, 'artists/');
+                const artists = await getDocs(query(artists_ref));
+
+                if (artists != null) {
+                    await artists.forEach(async artist => {
+                        const element_artist = artist.data();
+
+                        await genereResults.forEach(async album => {
+                            const element = album.data();
+
+                            const artist_doc = element.ID_AR; 
+                            const artist_path = artist_doc.path;
+                            const artist_id = artist_path.split('/');
+
+                            if (artist_id[1] == artist.id) {
+                                var t_album_div = `<div class="col-2">
+                                    <a href="./show.html?ID_A=${album.id}" class="d-block mb-1"><img style="border-radius: 5px;" src="${element.image}" class="card-img-top"></a>
+                                    <div class="d-flex align-items-center">
+                                        <div style="line-height: 15px;">
+                                            <div><strong>${element.name}</strong></div>
+                                            <a href="./artist.html?ID_AR=${artist.id}" class="text-muted" style="font-size: 12px;"><strong>${element_artist.name} ${element_artist.surname}</strong></a>
+                                        </div>
+                                    </div>
+                                </div>`;
+
+                                $("#genere_row").append(t_album_div);
                             }
                         });
                     });
-
-                    n_found++;
                 }
 
-                if (stateResults.length > 0) {
-                    var album_title_div = `<div id="genere">
-                        <hr style="margin: 2rem 0 0.2rem 0;">
-                        <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
-                            <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                Country
-                            </h2>
-                        </div>
-                        <div class="row row-cards" id="state_row">
-                            
-                        </div>
-                    </div>`;
-                    $("#all_results").append(album_title_div);
+                n_found++;
+            }
 
-                    artistsRef.once("value", (snap) => {
-                        let artists = snap.val();
-    
-                        artists.forEach((element) => {
-                            if (element !== undefined) {
-                                for (let i = 0; i < stateResults.length; i++) {
-                                    const album = stateResults[i];
-                                    if (album.ID_AR == element.ID_AR) {
-                                        var t_album_div = `<div class="col-2">
-                                            <a href="./show.html?ID_A=${album.ID_A}" class="d-block mb-1"><img style="border-radius: 5px;" src="${album.image}" class="card-img-top"></a>
-                                            <div class="d-flex align-items-center">
-                                                <div style="line-height: 15px;">
-                                                    <div><strong>${album.name}</strong></div>
-                                                    <a href="./artist.html?ID_AR=${element.ID_AR}" class="text-muted" style="font-size: 12px;"><strong>${element.name} ${element.surname}</strong></a>
-                                                </div>
-                                            </div>
-                                        </div>`
-    
-                                        $("#state_row").append(t_album_div);
-                                    }
-                                }
+            if (stateResults.length > 0) {
+                var album_title_div = `<div id="genere">
+                    <hr style="margin: 2rem 0 0.2rem 0;">
+                    <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Country
+                        </h2>
+                    </div>
+                    <div class="row row-cards" id="state_row">
+                        
+                    </div>
+                </div>`;
+                $("#all_results").append(album_title_div);
+
+                const artists_ref = collection(firestore, 'artists/');
+                const artists = await getDocs(query(artists_ref));
+
+                if (artists != null) {
+                    await artists.forEach(async artist => {
+                        const element_artist = artist.data();
+
+                        await stateResults.forEach(async album => {
+                            const element = album.data();
+
+                            const artist_doc = element.ID_AR; 
+                            const artist_path = artist_doc.path;
+                            const artist_id = artist_path.split('/');
+
+                            if (artist_id[1] == artist.id) {
+                                var t_album_div = `<div class="col-2">
+                                    <a href="./show.html?ID_A=${album.id}" class="d-block mb-1"><img style="border-radius: 5px;" src="${element.image}" class="card-img-top"></a>
+                                    <div class="d-flex align-items-center">
+                                        <div style="line-height: 15px;">
+                                            <div><strong>${element.name}</strong></div>
+                                            <a href="./artist.html?ID_AR=${artist.id}" class="text-muted" style="font-size: 12px;"><strong>${element_artist.name} ${element_artist.surname}</strong></a>
+                                        </div>
+                                    </div>
+                                </div>`;
+
+                                $("#state_row").append(t_album_div);
                             }
                         });
                     });
-
-                    n_found++;
                 }
-            });
 
+                n_found++;
+            }
+
+            const tracks_ref = collection(firestore, 'tracks/');
+            const tracks = await getDocs(query(tracks_ref));
             let trackResults = [];
-            tracksRef.once("value", function (snap) {
-                tracks = snap.val();
-                var randList = [];
-                var randList_index = [];
-                var randList_artist = [];
-                var randList_artist_index = [];
-                var t;
-                var index;
 
-                tracks.forEach((track) => {
-                    if (track !== undefined) {
-                        var tn = track.name;
-                        if (tn.toLowerCase() == searched.toLowerCase() || tn.toLowerCase().includes(searched.toLowerCase())) {
-                            trackResults.push(track)
-                            randList_artist_index.push(track.ID_AR);
-                        }
+            if (tracks != null) {
+                await tracks.forEach(async track => {
+                    const element = track.data();
+
+                    var tn = element.name;
+                    if (tn.toLowerCase() == searched.toLowerCase() || tn.toLowerCase().includes(searched.toLowerCase())) {
+                        trackResults.push(track);
                     }
                 });
+            }
 
-                if (trackResults.length > 0) {
-                    var track_title_div = `<div id="tracks">
-                        <hr style="margin: 2rem 0 0.2rem 0;">
-                        <div class="page-header d-print-none mb-1" style="margin: 0.2rem 0 0;">
-                            <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                Tracks
-                            </h2>
-                        </div>
-                        <div class="row g-3" id="track_row">
-    
-                        </div>
-                    </div>`;
-                    $("#all_results").append(track_title_div);
-                    
-                    artistsRef.once("value", (snap) => {
-                        let artists = snap.val();
-    
-                        artists.forEach((element) => {
-                            if (element !== undefined) {
-                                for (let i = 0; i < trackResults.length; i++) {
-                                    const track = trackResults[i];
-                                    if (track.ID_AR == element.ID_AR) {
-                                        var t_track_div = `<div class="col-3">
-                                            <div class="row g-3 align-items-center">
-                                                <a class="col-auto">
-                                                    <span class="avatar" style="background-image: url(${track.image})"></span>
-                                                </a>
-                                                <div class="col text-truncate">
-                                                    <a href="./show.html?ID_A=${track.ID_A}" class="text-reset d-block text-truncate" style="font-weight: 500; line-height: 1;">${track.name}</a>
-                                                    <a href="./artist.html?ID_AR=${element.ID_AR}" class="text-muted text-truncate mt-n1" style="font-weight: 400;">${element.name} ${element.surname}</a>
-                                                </div>
-                                                <div class="text-muted col-auto">
-                                                    ${secondsToFormat(track.duration)}
-                                                </div>
-                                                <hr style="width:90%; margin-left:5% !important; margin-right:5% !important; margin-top:10px !important; margin-bottom:10px !important;">
-                                            </div>
-                                        </div>`
-    
-                                        $("#track_row").append(t_track_div);
-                                    }
-                                }
+            if (trackResults.length > 0) {
+                var track_title_div = `<div id="tracks">
+                    <hr style="margin: 2rem 0 0.2rem 0;">
+                    <div class="page-header d-print-none mb-1" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Tracks
+                        </h2>
+                    </div>
+                    <div class="row g-3" id="track_row">
+
+                    </div>
+                </div>`;
+                $("#all_results").append(track_title_div);
+
+                const artists_ref = collection(firestore, 'artists/');
+                const artists = await getDocs(query(artists_ref));
+
+                if (artists != null) {
+                    await artists.forEach(async artist => {
+                        const element_artist = artist.data();
+                        console.log(artist.id);
+                        await trackResults.forEach(async track => {
+                            const element = track.data();
+
+                            const artist_doc = element.ID_AR; 
+                            const artist_path = artist_doc.path;
+                            const artist_id = artist_path.split('/');
+
+                            const album_doc = element.ID_A; 
+                            const album_path = album_doc.path;
+                            const album_id = album_path.split('/');
+
+                            if (artist_id[1] == artist.id) {
+                                var t_track_div = `<div class="col-3">
+                                    <div class="row g-3 align-items-center">
+                                        <a class="col-auto">
+                                            <span class="avatar" style="background-image: url(${element.image})"></span>
+                                        </a>
+                                        <div class="col text-truncate">
+                                            <a href="./show.html?ID_A=${album_id[1]}&ID_T=${track.id}" class="text-reset d-block text-truncate" style="font-weight: 500; line-height: 1;">${element.name}</a>
+                                            <a href="./artist.html?ID_AR=${artist.id}" class="text-muted text-truncate mt-n1" style="font-weight: 400;">${element_artist.name} ${element_artist.surname}</a>
+                                        </div>
+                                        <div class="text-muted col-auto">
+                                            ${secondsToFormat(element.duration)}
+                                        </div>
+                                        <hr style="width:90%; margin-left:5% !important; margin-right:5% !important; margin-top:10px !important; margin-bottom:10px !important;">
+                                    </div>
+                                </div>`;
+
+                                $("#track_row").append(t_track_div);
                             }
                         });
                     });
-                    n_found++;
                 }
 
-                if (n_found == 0) {
-                    const empty_div = `<hr style="margin: 1rem 0 0.2rem 0;">
-                    <div class="empty">
-                        <div class="empty-img"><img src="https://preview.tabler.io/static/illustrations/undraw_work_together_h63l.svg" alt="" height="128"></div>
-                        <p class="empty-title">No results found</p>
-                        <p class="empty-subtitle text-muted">Try adjusting your search or filter to find what you're looking for.</p>
-                    </div>`;
-                    document.getElementById('all_results').innerHTML = empty_div;
-                }
-            });
+                n_found++;
+
+            }
+            if (n_found == 0) {
+                const empty_div = `<hr style="margin: 1rem 0 0.2rem 0;">
+                <div class="empty">
+                    <div class="empty-img"><img src="https://preview.tabler.io/static/illustrations/undraw_work_together_h63l.svg" alt="" height="128"></div>
+                    <p class="empty-title">No results found</p>
+                    <p class="empty-subtitle text-muted">Try adjusting your search or filter to find what you're looking for.</p>
+                </div>`;
+                document.getElementById('all_results').innerHTML = empty_div;
+            }
             
         } else {
             const empty_div = `<hr style="margin: 1rem 0 0.2rem 0;">

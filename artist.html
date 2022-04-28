@@ -138,7 +138,7 @@
     <div id="modals_sign_div">
 
     </div>
-    <script>
+    <script type="module">
         function secondsToFormat(totalSeconds) {
 
             const minutes = Math.floor(totalSeconds / 60);
@@ -158,6 +158,8 @@
         const urlParams = new URLSearchParams(queryString);
         const searched_id = urlParams.get('ID_AR')
 
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDl9SE7vbQ4MtIXUSEvmkN_7dgBUC6KU1U",
@@ -170,161 +172,133 @@
             appId: "1:615866017038:web:73642d6681881c342be35f",
             measurementId: "G-ESNYSNZGTF",
         };
-        firebase.initializeApp(firebaseConfig);
 
-        let tracksRef = firebase.database().ref("tracks/");
-        let albumsRef = firebase.database().ref("albums/");
-        let artistsRef = firebase.database().ref("artists/");
+        const app = initializeApp(firebaseConfig);
+        self.firestore = getFirestore(app);
 
-        var artist_f;
-        artistsRef.once("value", (snap) => {
-            let artists = snap.val();
+        import { doc, getDoc, getDocs, collection, addDoc, deleteDoc, updateDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
 
-            artists.forEach((artist) => {
-                if (artist !== undefined) {
-                    if (artist.ID_AR == searched_id) {
-                        artist_f = artist;
-                    }
-                }
-            });
+        let artist_ref = doc(firestore, "artists", searched_id);
+        let artist = (await getDoc(artist_ref)).data();
+        console.log(artist);
 
-            if (artist_f != null) {
-                var artist_rimg_div = `<div class="container-xl d-flex flex-column justify-content-center">
-                    <div class="empty">
-                        <div class="empty-img mb-1">
-                            <a href="">
-                                <span class="avatar avatar-xl avatar-rounded"
-                                    style="background-image: url(${artist_f.image})"></span>
-                            </a>
+        if (artist != null) {
+            var artist_rimg_div = `<div class="container-xl d-flex flex-column justify-content-center">
+                <div class="empty">
+                    <div class="empty-img mb-1">
+                        <a href="#">
+                            <span class="avatar avatar-xl avatar-rounded" style="background-image: url(${artist.image})"></span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div id="browse_title">
+                <div class="page-header d-print-none">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <h1 class="page-title" style="font-size: 34px; font-weight: 700;">
+                                ${artist.name} ${artist.surname}
+                            </h1>
                         </div>
                     </div>
                 </div>
-                <div id="browse_title">
-                    <div class="page-header d-print-none">
-                        <div class="row g-2 align-items-center">
-                            <div class="col">
-                                <h1 class="page-title" style="font-size: 34px; font-weight: 700;">
-                                    ${artist_f.name} ${artist_f.surname}
-                                </h1>
+                <hr style="margin: 0.1rem 0 1rem 0;">
+            </div>`;
+            $("#main_div").append(artist_rimg_div);
+
+
+            const tracks_query = query(collection(firestore, "tracks"), where("ID_AR", "==", artist_ref));
+            let tracks_query_result = await getDocs(tracks_query);
+            
+            if (Object.keys(tracks_query_result).length > 0) {
+                var track_title_div = `<div id="tracks">
+                    <div class="page-header d-print-none mb-1" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Tracks
+                        </h2>
+                    </div>
+                    <div class="row g-3" id="track_row">
+
+                    </div>
+                </div>`;
+                $("#main_div").append(track_title_div);
+
+
+                await tracks_query_result.forEach(async track => {
+                    const element = track.data();
+
+                    const album_doc = element.ID_A; 
+                    const album_path = album_doc.path;
+                    const album_id = album_path.split('/');
+
+                    var track_div = `<div class="col-3">
+                        <div class="row g-3 align-items-center">
+                            <a class="col-auto">
+                                <span class="avatar"
+                                    style="background-image: url(${element.image})"></span>
+                            </a>
+                            <div class="col text-truncate">
+                                <a href="./show.html?ID_A=${album_id[1]}&ID_T=${track.id}" class="text-reset d-block text-truncate"
+                                    style="font-weight: 500; line-height: 1;">${element.name}</a>
+                            </div>
+                            <div class="text-muted col-auto">
+                                ${secondsToFormat(element.duration)}
+                            </div>
+                            <hr
+                                style="width:90%; margin-left:5% !important; margin-right:5% !important; margin-top:10px !important; margin-bottom:10px !important;">
+                        </div>
+                    </div>`;
+
+                    $("#track_row").append(track_div);
+                });
+            }
+
+            const album_query = query(collection(firestore, "albums"), where("ID_AR", "==", artist_ref));
+            let album_query_result = await getDocs(album_query);
+            
+            if (Object.keys(album_query_result).length > 0) {
+                var album_title_div = `<div id="albums">
+                    <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
+                        <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
+                            Albums
+                        </h2>
+                    </div>
+                    <div class="row row-cards" id="albums_row">
+
+                    </div>
+                </div>`;
+                $("#main_div").append(album_title_div);
+
+                await album_query_result.forEach(async album => {
+                    const element = album.data();
+
+
+                    var album_div = `<div class="col-2">
+                        <a href="./show.html?ID_A=${album.id}" class="d-block mb-1"><img style="border-radius: 5px;"
+                                src="${element.image}"
+                                class="card-img-top"></a>
+                        <div class="d-flex align-items-center">
+                            <div style="line-height: 15px;">
+                                <div><strong>${element.name}</strong></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <hr style="margin: 0.1rem 0 1rem 0;">
-                </div>`;
-                $("#main_div").append(artist_rimg_div);
+                    </div>`
 
-
-                var album_results = [];
-                albumsRef.once("value", (snap) => {
-                    let albums = snap.val();
-
-                    albums.forEach((album) => {
-                        if (album !== undefined) {
-                            if (album.ID_AR == searched_id) {
-                                album_results.push(album);
-                            }
-                        }
-                    });
-
-                    if (album_results.length > 0) {
-                        var album_title_div = `<div id="albums">
-                            <div class="page-header d-print-none" style="margin: 0.2rem 0 0;">
-                                <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                    Albums
-                                </h2>
-                            </div>
-                            <div class="row row-cards" id="albums_row">
-
-                            </div>
-                        </div>`;
-                        $("#main_div").append(album_title_div);
-
-                        for (let i = 0; i < album_results.length; i++) {
-                            const element = album_results[i];
-                            var album_div = `<div class="col-2">
-                                <a href="./show.html?ID_A=${element.ID_A}" class="d-block mb-1"><img style="border-radius: 5px;"
-                                        src="${element.image}"
-                                        class="card-img-top"></a>
-                                <div class="d-flex align-items-center">
-                                    <div style="line-height: 15px;">
-                                        <div><strong>${element.name}</strong></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>`
-
-                            $("#albums_row").append(album_div);
-                        }
-                    }
+                    $("#albums_row").append(album_div);
                 });
-
-
-                var trackResults = [];
-                tracksRef.once("value", (snap) => {
-                    let tracks = snap.val();
-
-                    tracks.forEach((track) => {
-                        if (track !== undefined) {
-                            if (track.ID_AR == searched_id) {
-                                trackResults.push(track)
-                            }
-                        }
-                    });
-
-                    if (trackResults.length > 0) {
-                        var track_title_div = `<div id="tracks">
-                            <hr style="margin: 2rem 0 0.2rem 0;">
-                            <div class="page-header d-print-none mb-1" style="margin: 0.2rem 0 0;">
-                                <h2 class="page-title" style="font-size: 17px; font-weight: 700;">
-                                    Tracks
-                                </h2>
-                            </div>
-                            <div class="row g-3" id="track_row">
-        
-                            </div>
-                        </div>`;
-                        $("#main_div").append(track_title_div);
-
-
-                        for (let i = 0; i < trackResults.length; i++) {
-                            const element = trackResults[i];
-                            var track_div = `<div class="col-3">
-                                <div class="row g-3 align-items-center">
-                                    <a class="col-auto">
-                                        <span class="avatar"
-                                            style="background-image: url(${element.image})"></span>
-                                    </a>
-                                    <div class="col text-truncate">
-                                        <a href="./show.html?ID_A=${element.ID_A}" class="text-reset d-block text-truncate"
-                                            style="font-weight: 500; line-height: 1;">${element.name}</a>
-                                    </div>
-                                    <div class="text-muted col-auto">
-                                        ${secondsToFormat(element.duration)}
-                                    </div>
-                                    <hr
-                                        style="width:90%; margin-left:5% !important; margin-right:5% !important; margin-top:10px !important; margin-bottom:10px !important;">
-                                </div>
-                            </div>`;
-
-                            $("#track_row").append(track_div);
-                        }
-                    }
-                });
-            } else {
-                const empty_div = `<div class="empty" style="margin-top: 100px;">
-                    <div class="empty-img"><img src="https://preview.tabler.io/static/illustrations/undraw_work_together_h63l.svg" alt="" height="128">
-                    </div>
-                    <p class="empty-title">No results found</p>
-                    <p class="empty-subtitle text-muted">
-                        Try adjusting your search or filter to find what you're looking for.
-                    </p>
-                </div>`;
-                document.getElementById('main_div').innerHTML = empty_div;
             }
-        });
-
-
-
+        } else {
+            const empty_div = `<div class="empty" style="margin-top: 100px;">
+                <div class="empty-img"><img src="https://preview.tabler.io/static/illustrations/undraw_work_together_h63l.svg" alt="" height="128">
+                </div>
+                <p class="empty-title">No results found</p>
+                <p class="empty-subtitle text-muted">
+                    Try adjusting your search or filter to find what you're looking for.
+                </p>
+            </div>`;
+            document.getElementById('main_div').innerHTML = empty_div;
+        }
 
 
         const btn = document.getElementById('search_bar');

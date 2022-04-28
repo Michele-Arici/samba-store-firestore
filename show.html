@@ -408,6 +408,9 @@
         import { getDatabase, ref, get, set, child, update, remove, push } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js"
         import { getCookie, setCookie, eraseCookie } from './scripts/sambaCookies.js';
         
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
+
         const user_id = getCookie('user_id');
 
         const queryString = window.location.search;
@@ -427,12 +430,13 @@
             measurementId: "G-ESNYSNZGTF",
         };
 
-        firebase.initializeApp(firebaseConfig);
+        const app = initializeApp(firebaseConfig);
+        self.firestore = getFirestore(app);
 
-        let tracksRef = firebase.database().ref("tracks/");
-        let albumsRef = firebase.database().ref("albums/");
-        let artistsRef = firebase.database().ref("artists/");
-        let customerRef = firebase.database().ref("customers/");
+        //let tracksRef = firebase.database().ref("tracks/");
+        //let albumsRef = firebase.database().ref("albums/");
+        //let artistsRef = firebase.database().ref("artists/");
+        //let customerRef = firebase.database().ref("customers/");
 
         function AddToCart(strong_id) {
             var id = strong_id.split('_');
@@ -451,6 +455,7 @@
 
         let cart_tracks = [];
         let bought_tracks = [];
+        /*
         if (getCookie('user_email') != null) {
             firebase.database().ref("customers/" + user_id + "/cart/").once("value", (snap) => {
                 let tracks = snap;
@@ -474,7 +479,8 @@
                 });
             });
         }
-        
+        */
+
         function isAlreadyAdded(id) {
             let added = false;
             cart_tracks.forEach(id_t => {
@@ -495,6 +501,157 @@
             return bought;
         }
 
+        import { doc, getDoc, getDocs, collection, addDoc, deleteDoc, updateDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
+        // Dato id di un album ritorni tutte le informazioni dell’album ed anche tutte le informazioni delle varie tracce che ci sono dentro
+        
+        let albumRef = doc(firestore, "albums", searched_id);
+        let album = (await getDoc(albumRef)).data();
+        console.log(album);
+
+        if (album != null) {
+            document.getElementById('page_title').innerHTML = "Samba Store | " + album.name;
+            var genere = album.genre
+            genere = genere.toUpperCase();
+            var release_date = album.release_date
+            var release_year = release_date.split('-');
+            var album_title_div = `<div class="row row-deck row-cards">
+                <div class="col-sm-3" style="justify-content: right;">
+                    <a href="#" class="d-block mb-1"><img style="border-radius: 5px;"
+                            src="${album.image}"
+                            class="card-img-top">
+                    </a>
+                </div>
+                <div class="col-sm-9">
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <h1 class="card-title" style="margin-bottom: 0; font-size: 26px; font-weight: 600; line-height: 0.5;">
+                                ${album.name}
+                            </h1>
+                            <div style="margin-bottom: 0; font-size: 26px; font-weight: 400; line-height: 1.5;">
+                                <a href="#" id="album_title_artist_name"></a>
+                            </div>
+                            <div class="subheader">${genere} · ${release_year[0]}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr style="margin: 2rem 0 0.2rem 0;">`;
+            $("#main_div").append(album_title_div);
+
+            document.getElementById('player_image').style.backgroundImage = `url('${album.image}')`;
+            
+            const artist_doc = album.ID_AR; 
+            const artist_path = artist_doc.path;
+            const artist_id = artist_path.split('/');
+            
+            const artist_ref = doc(firestore, artist_path);
+            const artist = (await getDoc(artist_ref)).data();
+            
+            if (artist != null) {
+                document.getElementById('album_title_artist_name').innerHTML = `${artist.name} ${artist.surname}`;
+                document.getElementById('album_title_artist_name').href = "./artist.html?ID_AR=" + artist_id[1];
+            }
+
+            const tracks_query = query(collection(firestore, "tracks"), where("ID_A", "==", albumRef));
+            let tracks_query_result = await getDocs(tracks_query);
+            
+            if (Object.keys(tracks_query_result).length > 0) {
+                var track_title_div = `<table class="table table-vcenter card-table">
+                    <tbody id="tbody_tracks">
+                        
+                    </tbody>
+                </table>`;
+                $("#main_div").append(track_title_div);
+
+                var i = 0;
+                await tracks_query_result.forEach(async track => {
+                    const element = track.data();
+                    if (red_track_id == track.id) {
+                        var track_div = `<tr class="bg-blue text-white" style="border-radius: 5px;">
+                            <td class="text-muted w-1 align-middle"><a href='#' data-bs-toggle="modal" data-bs-target="#modal-player" class="btn btn-ghost-light w-100 btn-icon" id="play_button_${element.ID_T}"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-player-play" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <path d="M7 4v16l13 -8z"></path>
+                            </svg></a>
+                            </td>
+                            <td class="w-1" style="color: #ffffff;">${i + 1}</td>
+                            <td>
+                                <strong>${element.name}</strong>
+                            </td>
+                            <td></td>
+                            <td class=" w-1">
+                                ${secondsToFormat(element.duration)}
+                            </td>
+                            <td class="w-1" id="td_cart_button_${track.id}">
+                                <a href="#" id="cart_button_${track.id}" class="btn btn-outline-light w-100">${element.price}$</a>
+                            </td>
+                        </tr>`;
+                    } else {
+                        var track_div = `<tr>
+                            <td class="text-muted w-1 align-middle"><a href='#' data-bs-toggle="modal" data-bs-target="#modal-player" class="btn btn-ghost-primary w-100 btn-icon" id="play_button_${element.ID_T}"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-player-play" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <path d="M7 4v16l13 -8z"></path>
+                            </svg></a></td>
+                            <td class="text-muted w-1">${i + 1}</td>
+                            <td>
+                                <strong>${element.name}</strong>
+                            </td>
+                            <td></td>
+                            <td class="text-muted w-1">
+                                ${secondsToFormat(element.duration)}
+                            </td>
+                            <td class="w-1" id="td_cart_button_${track.id}">
+                                <a href="#" id="cart_button_${track.id}" class="btn btn-outline-primary w-100">${element.price}$</a>
+                            </td>
+                        </tr>`;
+                    }
+    
+                    urlPreview.set(i, element.preview)
+                    urlName.set(i, element.name)
+    
+                    $("#tbody_tracks").append(track_div);
+    
+                    var id = '#play_button_' + track.id;
+                    var cart_button = '#cart_button_' + track.id;
+                    var td_cart_button = 'td_cart_button_' + track.id;
+                    
+                    if (isAlreadyAdded(track.id)) {
+                        document.getElementById(td_cart_button).innerHTML = `<a class="btn btn-outline-success btn-icon w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-shopping-cart" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <circle cx="6" cy="19" r="2"></circle>
+                                <circle cx="17" cy="19" r="2"></circle>
+                                <path d="M17 17h-11v-14h-2"></path>
+                                <path d="M6 5l14 1l-1 7h-13"></path>
+                            </svg>
+                        </a>`;
+                    } else if (isAlreadyBought(track.id)) {
+                        document.getElementById(td_cart_button).innerHTML = `<a class="btn btn-outline-success btn-icon w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <path d="M5 12l5 5l10 -10"></path>
+                            </svg>
+                        </a>`;
+                    }
+    
+                    if (red_track_id == track.id) {
+                        location.href = id;
+                    }
+    
+                    $(id).click(function () {
+                        SetUrl(i);
+                    });
+    
+                    $(cart_button).click(function () {
+                        AddToCart(this.id);
+                    });
+
+                    i++;
+                });
+            }
+        }
+
+
+        /*
         var album_result;
         albumsRef.once("value", (snap) => {
             let albums = snap.val();
@@ -676,7 +833,7 @@
             }
         });
 
-
+        */
 
     </script>
     <script>

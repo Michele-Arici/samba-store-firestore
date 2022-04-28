@@ -200,7 +200,7 @@ if (albums != null) {
             await albums.forEach(async album => {
                 const element = album.data();
 
-                const artist_doc = element.ID_AR; 
+                const artist_doc = element.ID_AR;
                 const artist_path = artist_doc.path;
                 const artist_id = artist_path.split('/');
 
@@ -242,7 +242,6 @@ function secondsToFormat(totalSeconds) {
 
 const tracks_ref = collection(firestore, 'tracks/');
 const tracks = await getDocs(query(tracks_ref));
-console.log(tracks);
 
 if (tracks != null) {
     var i = 0;
@@ -253,15 +252,14 @@ if (tracks != null) {
     if (artists != null) {
         await artists.forEach(async artist => {
             const element_artist = artist.data();
-            console.log(artist.id);
             await tracks.forEach(async track => {
                 const element = track.data();
 
-                const artist_doc = element.ID_AR; 
+                const artist_doc = element.ID_AR;
                 const artist_path = artist_doc.path;
                 const artist_id = artist_path.split('/');
 
-                const album_doc = element.ID_A; 
+                const album_doc = element.ID_A;
                 const album_path = album_doc.path;
                 const album_id = album_path.split('/');
 
@@ -291,10 +289,9 @@ if (tracks != null) {
     tracks.forEach(track => {
         const element = track.data();
 
-        console.log(element);
     });
 
-    
+
 }
 
 /*

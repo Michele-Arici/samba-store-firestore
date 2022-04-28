@@ -92,84 +92,52 @@ if (email != null) {
     document.getElementById('sign-in_div').innerHTML = log_in;
 
 
-    let ownedRef = firebase.database().ref("customers/" + getCookie('user_id') + "/owned_tracks/");
-
-    ownedRef.once("value", (snap) => {
-        let items = snap;
-
-        items.forEach(item => {
-            if (item.key != "initialize") {
+    let owned_tracks = await (getDoc(doc(firestore, "customers/", getCookie('user_id')))).data()['owned_tracks'];
 
 
-                let current_track_image = firebase.database().ref("tracks/" + item.val().track + "/image").once('value').then((snapshot) => {
-                    return snapshot.val();
-                });
+    owned_tracks.forEach(item => {
+        if (item.key != "initialize") {
 
-                let current_track_name = firebase.database().ref("tracks/" + item.val().track + "/name").once('value').then((snapshot) => {
-                    return snapshot.val();
-                });
+            let current_track_ref = doc(firestore, "tracks/", item.val().tracks);
+            let current_artist_id = (getDoc(current_track_ref)).data()['ID_AR'];
+            let current_track_artist_ref = doc(firestore, "tracks/", current_artist_id);
+            let current_album_id = (getDoc(current_track_ref)).data()['ID_A'];
+            let current_track_album_ref = doc(firestore, "albums/", current_album_id);
+            let current_track_name = (getDoc(current_track_ref)).data()['name'];
 
-                let current_album_id = firebase.database().ref("tracks/" + item.val().track + "/ID_A").once('value').then((snapshot) => {
-                    return snapshot.val();
-                });
-
-                let current_track_duration = firebase.database().ref("tracks/" + item.val().track + "/duration").once('value').then((snapshot) => {
-                    return snapshot.val();
-                });
-
-                let current_track_album_id = firebase.database().ref("tracks/" + item.val().track + "/ID_A").once('value').then((snapshot) => {
-                    return snapshot.val();
-                });
+            let current_track_image = (getDoc(current_track_ref)).data()['image'];
 
 
-                let current_artist_id = firebase.database().ref("tracks/" + item.val().track + "/ID_AR").once('value').then((snapshot) => {
-                    return snapshot.val();
-                });
+            let current_track_artist_name = (getDoc(current_track_artist_ref)).data()['name'];
 
-                let current_track_album_name = current_track_album_id.then(value => {
-                    return firebase.database().ref("albums/" + value + "/name").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
-                });
+            let current_track_artist_surname = (getDoc(current_track_artist_ref)).data()['surname'];
 
-                let current_track_album_image = current_track_album_id.then(value => {
-                    return firebase.database().ref("albums/" + value + "/image").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
-                });
+            let current_track_duration = (getDoc(current_track_ref)).data()['duration'];
 
-                let current_track_artist_name = current_artist_id.then(value => {
-                    return firebase.database().ref("artists/" + value + "/name").once('value').then((snapshot) => {
+            let current_track_album_name = (getDoc(current_track_album_ref)).data()['name'];
 
-                        return snapshot.val();
-                    });
-                });
+            let current_track_album_image = (getDoc(current_track_album_ref)).data()['image'];
 
-                let current_track_artist_surname = current_artist_id.then(value => {
-                    return firebase.database().ref("artists/" + value + "/surname").once('value').then((snapshot) => {
 
-                        return snapshot.val();
-                    });
-                });
+            // Promise.all([current_track_name, current_track_image, current_track_duration, current_track_artist_name, current_album_id, current_artist_id, current_track_artist_surname, current_track_album_name, current_track_album_image]).then((values) => {
 
-                Promise.all([current_track_name, current_track_image, current_track_duration, current_track_artist_name, current_album_id, current_artist_id, current_track_artist_surname, current_track_album_name, current_track_album_image]).then((values) => {
+            //     current_track_name = values[0];
+            //     current_track_image = values[1];
+            // let current_track_seconds = values[2] % 60;
+            let current_track_seconds = current_track_duration % 60;
 
-                    current_track_name = values[0];
-                    current_track_image = values[1];
-                    let current_track_seconds = values[2] % 60;
+            if (current_track_seconds < 10) {
+                current_track_duration = Math.floor(values[2] / 60) + ":0" + (current_track_seconds);
+            } else current_track_duration = Math.floor(values[2] / 60) + ":" + current_track_seconds;
 
-                    if (current_track_seconds < 10) {
-                        current_track_duration = Math.floor(values[2] / 60) + ":0" + (values[2] % 60);
-                    } else current_track_duration = Math.floor(values[2] / 60) + ":" + current_track_seconds;
+            // current_track_artist_name = values[3];
+            // current_album_id = values[4];
+            // current_artist_id = values[5];
+            // current_track_artist_surname = values[6];
+            // current_track_album_name = values[7];
+            // current_track_album_image = values[8];
 
-                    current_track_artist_name = values[3];
-                    current_album_id = values[4];
-                    current_artist_id = values[5];
-                    current_track_artist_surname = values[6];
-                    current_track_album_name = values[7];
-                    current_track_album_image = values[8];
-
-                    let current_track_owned_track = `<div class="col-3">
+            let current_track_owned_track = `<div class="col-3">
                             <div class="row g-3 align-items-center">
                                 <a class="col-auto">
                                     <span class="avatar" style="background-image: url(${current_track_image})"></span>
@@ -186,9 +154,9 @@ if (email != null) {
                             </div>
                         </div>`;
 
-                    $("#tracks").append(current_track_owned_track);
+            $("#tracks").append(current_track_owned_track);
 
-                    let current_track_being_album = `<div class="col-2">
+            let current_track_being_album = `<div class="col-2">
                             <div>
                                 <a href="./show.html?ID_A=${current_album_id}" class="d-block mb-1"><img style="border-radius: 5px;" src="${current_track_album_image}" class="card-img-top"></a>
                                 <div class="d-flex align-items-center">
@@ -200,14 +168,13 @@ if (email != null) {
                             </div>
                         </div>`;
 
-                    if (!document.getElementById("album").textContent.includes(current_track_album_name)) {
-                        $("#album").append(current_track_being_album);
-                    }
-                });
+            if (!document.getElementById("album").textContent.includes(current_track_album_name)) {
+                $("#album").append(current_track_being_album);
             }
-        });
-
+            //         });
+        }
     });
+
 
 } else {
     var log_in = `<div class="page page-center">

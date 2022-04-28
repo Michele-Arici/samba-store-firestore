@@ -88,14 +88,12 @@ if (email == null) {
         if (isCorrectFormat) {
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    console.log("entrato puttana");
                     addDoc(collection(firestore, "customers/"), {
                         email: email,
                         owned_tracks: { initialize: "" },
                         cart: { initialize: "" },
                         image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/OOjs_UI_icon_userAvatar.svg/2048px-OOjs_UI_icon_userAvatar.svg.png"
                     });
-                    console.log("non esploso puttana");
                     //Se funziona la registrazione nascondo il modale del signup e mostro quello del signin
                     $('#signUpModal').modal('hide');
                     $('#signInModal').modal('show');
@@ -133,36 +131,43 @@ if (email == null) {
                 .then((userCredential) => {
                     // Signed in 
 
+                    ///NON FUNZIONA
+                    ///NON FUNZIONA
+                    ///NON FUNZIONA
+
                     let user_id = "";
 
-                    //let customers = query(collection(firestore, "customers"), where("email", "==", email));
-                    let customers = firebase.collection('customers').where(`email`, '==', email).get();
-                    console.log(customers);
-                    // Promise.all([customers]).then((values) => {
 
-                    //     customers = values;
+                    // const customers_ref = collection(firestore, 'customers/');
+                    // const customers = getDocs(query(customers));
 
-                    //     user_id = customers[0];
-
-                    //     user_id.forEach(element => {
-                    //         console.log(element);
-                    //     });
-                    //     console.log(user_id);
-
-                    //     if (document.getElementById('remember_login').checked) {
-                    //         //(nomeCookie, valore che vuoi dare al cookie, durata cookie: 1 equivale ad 1 giorno)
-                    //         setCookie("user_id", user_id, 365);
-                    //         setCookie("user_email", email, 365);
-                    //         setCookie("user_password", password, 365);
-                    //     } else {
-                    //         setCookie("user_id", user_id, 0.24);
-                    //         setCookie("user_email", email, 0.24);
-                    //         setCookie("user_password", password, 0.24);
-                    //     }
-
-                    //     location.reload(); //Aggiorna la pagina
-
+                    // customers.forEach(async customer => {
+                    //     const email = customer.data()['email'];
+                    //     console.log(email);
                     // });
+
+                    // // let customers = doc(firestore, "customers");
+                    // let current_artist_id = async(getDoc(customers));
+
+                    // console.log(current_artist_id);
+
+
+                    // user_id = customers;
+
+                    // console.log(user_id);
+
+                    // if (document.getElementById('remember_login').checked) {
+                    //     //(nomeCookie, valore che vuoi dare al cookie, durata cookie: 1 equivale ad 1 giorno)
+                    //     setCookie("user_id", user_id, 365);
+                    //     setCookie("user_email", email, 365);
+                    //     setCookie("user_password", password, 365);
+                    // } else {
+                    //     setCookie("user_id", user_id, 0.24);
+                    //     setCookie("user_email", email, 0.24);
+                    //     setCookie("user_password", password, 0.24);
+                    // }
+
+                    // location.reload(); //Aggiorna la pagina
 
 
                 })

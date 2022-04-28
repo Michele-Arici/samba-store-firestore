@@ -1,22 +1,30 @@
 import { getCookie } from "./sambaCookies.js";
-// import { ref, push } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js";
-import { firebaseConfig } from "./firebase-config.js";
-import { ref, push } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js"
+import { getFirestore, doc, getDoc, getDocs, collection, addDoc, deleteDoc, updateDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
 
-firebase.initializeApp(firebaseConfig);
+import { firebaseConfig } from "./firebase-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+// get realtyme databse reference
+// self. to let firebase be global from other modules
+self.firestore = getFirestore(app);
+
 
 let subtotal = 0;
-var cart_total = 0;
+let cart_total = 0;
+// let albumRef = doc(firestore, "artists", "1BNyvucKgxledBmyCVRc");
+// let album = (await getDoc(albumRef)).data();
+// console.log(album);
 
-let cartRef = firebase.database().ref("customers/" + getCookie('user_id') + "/cart/");
+let cartRef = doc(firestore, "customers/", getCookie('user_id'));
+let cart = (await getDoc(cartRef)).data()['cart'];
 
 function DisplayCart() {
-    cartRef.once("value", (snap) => {
-        let items = snap;
 
-        //Object.keys(myObj).length gives the length of an object
-        if (Object.keys(items.val()).length > 1) {
-            $("#show_total").append(`<tbody>
+    //Object.keys(myObj).length gives the length of an object
+    if (Object.keys(cart).length > 1) {
+        $("#show_total").append(`<tbody>
                 <tr style="border-style: hidden; font-size: 20px; font-weight: 500;">
                     <td colspan="4" class="strong text-end">Subtotal</td>
                     <td class="text-end w-1" id="subtotal"></td>
@@ -31,59 +39,29 @@ function DisplayCart() {
                 </tr>
             </tbody>`);//printing out the "checkout thing"
 
-            items.forEach((item) => {
-                if (item.key != "initialize") {
-                    //returns a resolved promise
-                    let current_track_image = firebase.database().ref("tracks/" + item.val().track + "/image").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
+        cart.forEach((item) => {
+            if (item.key != "initialize") {
 
-                    let current_track_name = firebase.database().ref("tracks/" + item.val().track + "/name").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
+                let current_track_ref = doc(firestore, "tracks/", item.val());
+                let current_artist_id = (getDoc(current_track_ref)).data()['ID_AR'];
+                let current_track_artist_ref = doc(firestore, "tracks/", current_artist_id);
 
-                    let current_track_cost = firebase.database().ref("tracks/" + item.val().track + "/price").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
+                let current_track_name = (getDoc(current_track_ref)).data()['name'];
 
-                    let current_track_album_id = firebase.database().ref("tracks/" + item.val().track + "/ID_A").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
+                let current_track_cost = (getDoc(current_track_ref)).data()['price'];
 
-                    let current_track_id = firebase.database().ref("tracks/" + item.val().track + "/ID_T").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
+                let current_track_album_id = (getDoc(current_track_ref)).data()['ID_A'];
 
-                    let current_artist_id = firebase.database().ref("tracks/" + item.val().track + "/ID_AR").once('value').then((snapshot) => {
-                        return snapshot.val();
-                    });
 
-                    let current_track_artist = current_artist_id.then(value => {
-                        return firebase.database().ref("artists/" + value + "/name").once('value').then((snapshot) => {
-                            return snapshot.val();
-                        });
-                    });
+                let current_track_artist = (getDoc(current_track_artist_ref)).data()['name'];
 
-                    let current_track_artist_surname = current_artist_id.then(value => {
-                        return firebase.database().ref("artists/" + value + "/surname").once('value').then((snapshot) => {
-                            return snapshot.val();
-                        });
-                    });
+                let current_track_artist_surname = (getDoc(current_track_artist_ref)).data()['surname'];
 
-                    //"Decode the promises and set them into an array and then execute some code"
-                    Promise.all([current_track_name, current_track_image, current_track_cost, current_track_artist, current_track_artist_surname, current_track_album_id, current_track_id, current_artist_id]).then((values) => {
-                        current_track_name = values[0];
-                        current_track_image = values[1];
-                        current_track_cost = values[2];
-                        current_track_artist = values[3];
-                        current_track_artist_surname = values[4];
-                        current_track_album_id = values[5];
-                        current_track_id = values[6];
-                        current_artist_id = values[7];
 
-                        subtotal += current_track_cost;
 
-                        let new_currently_in_cart = `<div class="col-12">
+                subtotal += current_track_cost;
+
+                let new_currently_in_cart = `<div class="col-12">
                             <div class="row align-items-center">
                                 <a class="col-auto">
                                     <span class="avatar" style="background-image: url(${current_track_image})"></span>
@@ -106,30 +84,28 @@ function DisplayCart() {
                             </div>
                         </div>`;
 
-                        $("#show_tracks").append(new_currently_in_cart);
+                $("#show_tracks").append(new_currently_in_cart);
 
-                        //Math.round(subtotal * 10) / 10
-                        //arrotonda la variabile subtotal ad intera. viene moltiplicata *100 e divisa *100 per tenere 2 cifre decimali che andrebbero perse nel round
-                        cart_total = `\$${Math.round(subtotal * 100) / 100 + 2}`;
-                        document.getElementById("subtotal").innerHTML = `\$${Math.round(subtotal * 100) / 100}`;
-                        document.getElementById("total").innerHTML = cart_total;
-                        let queryID = `#remove_${item.key}`;
-                        let remove = document.querySelector(queryID);
+                //Math.round(subtotal * 10) / 10
+                //arrotonda la variabile subtotal ad intera. viene moltiplicata *100 e divisa *100 per tenere 2 cifre decimali che andrebbero perse nel round
+                cart_total = `\$${Math.round(subtotal * 100) / 100 + 2}`;
+                document.getElementById("subtotal").innerHTML = `\$${Math.round(subtotal * 100) / 100}`;
+                document.getElementById("total").innerHTML = cart_total;
+                let queryID = `#remove_${item.key}`;
+                let remove = document.querySelector(queryID);
 
-                        remove.addEventListener('click', (e) => {
-                            firebase.database().ref("customers/" + getCookie('user_id') + "/cart/" + item.key).remove();
-                            window.location.reload();
-                        });
+                remove.addEventListener('click', (e) => {
+                    deleteDoc(doc(firestore, "customers/" + getCookie('user_id'), "/cart/" + item.key));
+
+                    window.location.reload();
+                });
 
 
-                        //#TODO aggiungere sta roba negli ordini.
-
-                    });
-                }
-            });
-        } else {
-            document.getElementById('buy_tracks_div').innerHTML = "";
-            $("#show_tracks").append(`<div class="container-tight py-4">
+            }
+        });
+    } else {
+        document.getElementById('buy_tracks_div').innerHTML = "";
+        $("#show_tracks").append(`<div class="container-tight py-4">
                 <div class="empty">
                     <div class="empty-img"><img src="https://preview.tabler.io/static/illustrations/undraw_quitting_time_dm8t.svg"
                             alt="" height="128">
@@ -154,8 +130,7 @@ function DisplayCart() {
                     </div>
                 </div>
             </div>`)
-        }
-    });
+    }
 }
 
 DisplayCart();
@@ -166,39 +141,35 @@ const buyTracks = document.getElementById('buy_tracks');
 buyTracks.addEventListener('click', (e) => {
 
 
-    let cartRef = firebase.database().ref("customers/" + getCookie('user_id') + "/cart/");
-
-    cartRef.once("value", (snap) => {
-        let items = snap;
-
-        if (Object.keys(items.val()).length > 1) {
-            items.forEach(element => {
-                if (element.key != "initialize") {
-                    let json = { track: element.val()['track'] };
-                    firebase.database().ref("customers/" + getCookie('user_id') + "/owned_tracks/").push(json).key;
-
-                    var today = new Date();
-
-                    json = {
-                        Date: today.toLocaleDateString(),
-                        ID_C: getCookie('user_id'),
-                        ID_T: element.val()['track']
-                    };
-
-                    firebase.database().ref("order/").push(json).key;
-                    firebase.database().ref("customers/" + getCookie('user_id') + "/cart/" + element.key).remove();
-
-                    json = { cart: { initialize: "" } };
-                    let cartRef = ref(firebase.database(), "customers/" + getCookie('user_id'));
-                    push(cartRef, json);
-                }
-            });
-        } else {
-            $('#modal-error').modal('show');
-        }
+    let cartRef = (getDoc(doc(firestore, "customers/", getCookie('user_id')))).data()['cart'];
 
 
-    });
+    if (Object.keys(items.val()).length > 1) {
+        items.forEach(element => {
+            if (element.key != "initialize") {
+                let json = { track: element.val()['track'] };
+
+                firebase.database().ref("customers/" + getCookie('user_id') + "/owned_tracks/").push(json).key;//add
+                addDoc(getDoc(doc(firestore, "customers/" + getCookie('user_id'), "/owned_tracks/")), {
+                    Date: today.toLocaleDateString(),
+                    ID_C: getCookie('user_id'),
+                    ID_T: element.val()['track']
+                });
+                let today = new Date();
+
+                addDoc(collection(firestore, "order/"), {
+                    Date: today.toLocaleDateString(),
+                    ID_C: getCookie('user_id'),
+                    ID_T: element.val()['track']
+                });
+
+                deleteDoc(doc(firestore, "customers/" + getCookie('user_id'), "/cart/" + element.key));
+            }
+        });
+    } else {
+        $('#modal-error').modal('show');
+    }
+
 
     //Lascio tempo al client di inviare la richiesta prima del redirect. 
     setTimeout(function () {

@@ -1,10 +1,19 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js';
-import { ref, push } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js"
+import { getFirestore, doc, getDoc, getDocs, collection, addDoc, deleteDoc, updateDoc, query, where, setDoc } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js";
+
+import { firebaseConfig } from "./firebase-config.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
 
 //import { addCustomer } from '/scripts/sambaDB.js';
 import { auth } from '/scripts/firebase-config.js';
 import { getCookie, setCookie, eraseCookie } from '/scripts/sambaCookies.js';
 
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+// get realtyme databse reference
+// self. to let firebase be global from other modules
+self.firestore = getFirestore(app);
 
 
 
@@ -79,17 +88,14 @@ if (email == null) {
         if (isCorrectFormat) {
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // Signed in 
-                    const user = userCredential.user;
-
-                    //QUERY PER COLLEGARE L'ACCOUNT!!
-                    //addCustomer(user.uid, email, password, phone_number, city, firstName, surname);
-                    //QUERY PER COLLEGARE L'ACCOUNT!!
-
-                    let json = { email: email, owned_tracks: { initialize: "" }, cart: { initialize: "" }, image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/OOjs_UI_icon_userAvatar.svg/2048px-OOjs_UI_icon_userAvatar.svg.png" }
-                    let cartRef = ref(firebase.database(), "customers/");
-                    push(cartRef, json);
-
+                    console.log("entrato puttana");
+                    addDoc(collection(firestore, "customers/"), {
+                        email: email,
+                        owned_tracks: { initialize: "" },
+                        cart: { initialize: "" },
+                        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/OOjs_UI_icon_userAvatar.svg/2048px-OOjs_UI_icon_userAvatar.svg.png"
+                    });
+                    console.log("non esploso puttana");
                     //Se funziona la registrazione nascondo il modale del signup e mostro quello del signin
                     $('#signUpModal').modal('hide');
                     $('#signInModal').modal('show');
@@ -118,6 +124,7 @@ if (email == null) {
         const password = signinForm['signin_password'].value;
         //const rememberLogin = signinForm['remember_login'].value;
 
+
         const isCorrectFormat = checkSignInInvalidSyntax(email, password);
 
 
@@ -127,35 +134,35 @@ if (email == null) {
                     // Signed in 
 
                     let user_id = "";
-                    firebase.database().ref("customers/").once("value", (snap) => {
-                        let customers = snap;
 
-                        customers.forEach((element) => {
-                            if (element != undefined) {
+                    //let customers = query(collection(firestore, "customers"), where("email", "==", email));
+                    let customers = firebase.collection('customers').where(`email`, '==', email).get();
+                    console.log(customers);
+                    // Promise.all([customers]).then((values) => {
 
-                                let customer = element.val();
-                                if (customer.email != undefined) {
-                                    if (customer.email == email) {
-                                        user_id = element.key;
+                    //     customers = values;
 
-                                        if (document.getElementById('remember_login').checked) {
-                                            //(nomeCookie, valore che vuoi dare al cookie, durata cookie: 1 equivale ad 1 giorno)
-                                            setCookie("user_id", user_id, 365);
-                                            setCookie("user_email", email, 365);
-                                            setCookie("user_password", password, 365);
-                                        } else {
-                                            setCookie("user_id", user_id, 0.24);
-                                            setCookie("user_email", email, 0.24);
-                                            setCookie("user_password", password, 0.24);
-                                        }
+                    //     user_id = customers[0];
 
-                                        location.reload(); //Aggiorna la pagina
-                                    }
-                                }
-                            }
-                        });
-                    });
+                    //     user_id.forEach(element => {
+                    //         console.log(element);
+                    //     });
+                    //     console.log(user_id);
 
+                    //     if (document.getElementById('remember_login').checked) {
+                    //         //(nomeCookie, valore che vuoi dare al cookie, durata cookie: 1 equivale ad 1 giorno)
+                    //         setCookie("user_id", user_id, 365);
+                    //         setCookie("user_email", email, 365);
+                    //         setCookie("user_password", password, 365);
+                    //     } else {
+                    //         setCookie("user_id", user_id, 0.24);
+                    //         setCookie("user_email", email, 0.24);
+                    //         setCookie("user_password", password, 0.24);
+                    //     }
+
+                    //     location.reload(); //Aggiorna la pagina
+
+                    // });
 
 
                 })
